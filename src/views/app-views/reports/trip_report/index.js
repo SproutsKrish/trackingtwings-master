@@ -1,112 +1,224 @@
-import React, {useState} from 'react'
-import {Table,Button,Card,Drawer,Select, Input,Form,DatePicker } from 'antd'
-import Flex from 'components/shared-components/Flex'
-import { PlusOutlined,FileExcelOutlined,SearchOutlined } from '@ant-design/icons';
-import utils from 'utils'
-const { Option } = Select
+import React, { useState } from "react";
+import { Table, Button, Card, Select, DatePicker } from "antd";
+import Flex from "components/shared-components/Flex";
+import { FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
+import api from "configs/apiConfig";
+import { Excel } from "antd-table-saveas-excel";
+
+const { Option } = Select;
 const { RangePicker } = DatePicker;
-export const TripReport = () => {
+
+export const IdleReport = () => {
+  const [tripList, setTripList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("All");
+
+  const handleDateRangeChange = (dateRange) => {
+    setSelectedDateRange(dateRange);
+  };
+
+  const handleVehicleIdChange = (vehicleId) => {
+    setSelectedVehicleId(vehicleId);
+  };
+
+  const handleSearchClick = async () => {
+    // Log the actual selected values
+    console.log("Selected Date Range:", selectedDateRange);
+    if (selectedDateRange) {
+      const [startDate, endDate] = selectedDateRange;
+      console.log("Start Date:", startDate.format("YYYY-MM-DD"));
+      console.log("End Date:", endDate.format("YYYY-MM-DD"));
+    }
+    console.log("Selected Vehicle ID:", selectedVehicleId);
+
+    const data = {
+      start_day: selectedDateRange
+        ? selectedDateRange[0].format("YYYY-MM-DD HH:mm:ss")
+        : null,
+      end_day: selectedDateRange
+        ? selectedDateRange[1].format("YYYY-MM-DD HH:mm:ss")
+        : null,
+      device_imei: selectedVehicleId === "All" ? null : selectedVehicleId,
+    };
+
+    setTripList([]); // Clear previous data
+    setIsLoading(true);
+
+    try {
+      const trip_data = await api.post("get_keyonoff_report", data);
+      console.log(trip_data.data);
+
+      if (trip_data.data && Array.isArray(trip_data.data.data)) {
+        const processedData = trip_data.data.data.map((item) => ({
+          s_no: item.id,
+          vehicle_name: item.vehicle_name,
+          start_time: item.start_datetime,
+          start_location: item.start_latitude + ":" + item.start_longitude,
+          end_time: item.end_datetime,
+          end_location: item.end_latitude + ":" + item.end_longitude,
+          max_speed: item.max_speed,
+          avg_speed: item.avg_speed,
+          distance: item.distance,
+          duration: item.duration,
+        }));
+
+        console.log(processedData);
+
+        setTripList(processedData);
+
+        console.log("tripList:", tripList);
+      } else {
+        setTripList([]); // Clear the list when no data is found
+        console.log(
+          "Response data is not in the expected format:",
+          trip_data.data
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsLoading(false);
+
+    // Perform additional actions based on the selected values
+  };
+
   const tableColumns = [
     {
-      title: 'S.No',
-      dataIndex:'s_no'
+      title: "S.No",
+      dataIndex: "s_no",
     },
     {
-        title: 'Vehicle Name',
-        dataIndex:'vehicle_name'
+      title: "Vehicle Name",
+      dataIndex: "vehicle_name",
     },
     {
-        title: 'Start Time',
-        dataIndex: 'start_time',
+      title: "Start Time",
+      dataIndex: "start_time",
     },
     {
-        title: 'End Time',
-        dataIndex: 'end_time',
+      title: "Start Location",
+      dataIndex: "start_location",
     },
     {
-      title: 'Total Time (HH:MM)',
-      dataIndex: 'total_time',
+      title: "End Time",
+      dataIndex: "end_time",
     },
     {
-      title: 'Start Odometer',
-      dataIndex: 'start_odometer',
+      title: "End Time",
+      dataIndex: "end_location",
     },
     {
-      title: 'End Odometer',
-      dataIndex: 'end_odometer',
+      title: "Maximum Speed",
+      dataIndex: "max_speed",
     },
     {
-      title: 'Distance (KM)',
-      dataIndex: 'distance',
+      title: "Average Speed",
+      dataIndex: "avg_speed",
     },
     {
-      title: 'Start Location',
-      dataIndex: 'start_location',
-  },
-    {
-        title: 'End Location',
-        dataIndex: 'end_location',
+      title: "Distance (KM)",
+      dataIndex: "distance",
     },
     {
-        title: 'Map View',
-        dataIndex: 'map_view',
+      title: "Duration",
+      dataIndex: "duration",
     },
-]
-  const onFinish = values => {
-    console.log('Success:', values);
+    {
+      title: "Map View",
+      dataIndex: "map_view",
+    },
+  ];
+
+  const handleClick = () => {
+    const excel = new Excel();
+    excel
+      .addSheet("test")
+      .addColumns(tableColumns)
+      .addDataSource(tripList, {
+        str2Percent: true,
+      })
+      .saveAs("Excel.xlsx");
   };
- 
+
   return (
-    
     <>
-    <Card title="Trip Report">
-    <Flex alignItems="center" justifyContent="space-between" mobileFlex={false}>
-        <Flex className="mb-1" mobileFlex={false}>
-        <div className='mr-md-6 mr-3'>
-            <Select showSearch defaultValue="Today" 
-							className="w-100" 
-							style={{ minWidth: 180 }} >
-            <option value="1">Today</option>
-            <option value="2">Last 7 Days</option>
-            <option value="3">Last Month</option>
-            <option value="4">Custom</option>
-            </Select>
-          </div>
-					<div className='mr-md-3 mr-3' >
-            <RangePicker showTime />
-          </div>
-					<div className="mr-md-3 mb-3">
-						<Select mode="multiple"
-							defaultValue="All" 
-							className="w-100" 
-							style={{ minWidth: 180 }} 
-							
-							placeholder="Vehicle"
-						>
-							<Option value="All">All</Option>
-							<Option value="1">TN01AB1234</Option>
-							<Option value="2">TN02AB9874</Option>
-						</Select>
-					</div>
-				
-          <div className="mb-3">
-          <Button type="primary" success icon={<SearchOutlined/>} >Search</Button>
-          </div>
-          <div className="mb-3">
-          <Button type="primary" success icon={<FileExcelOutlined/>} ghost>Export</Button>
-          </div>
-				</Flex>
-                
-                
-            </Flex>
-      <div className="table-responsive">
-        <Table bordered columns={tableColumns}>
+      <Card title="Trip Report">
+        <Flex
+          alignItems="center"
+          justifyContent="space-between"
+          mobileFlex={false}
+        >
+          <Flex className="mb-1" mobileFlex={false}>
+            <div className="mr-md-6 mr-3">
+              <Select
+                showSearch
+                defaultValue="Today"
+                className="w-100"
+                style={{ minWidth: 180 }}
+              >
+                <option value="1">Today</option>
+                <option value="2">Last 7 Days</option>
+                <option value="3">Last Month</option>
+                <option value="4">Custom</option>
+              </Select>
+            </div>
+            <div className="mr-md-3 mr-3">
+              <RangePicker
+                showTime
+                name="range_picker"
+                format={"YYYY-MM-DD"}
+                onChange={handleDateRangeChange}
+              />
+            </div>
+            <div className="mr-md-3 mb-3">
+              <Select
+                defaultValue="All"
+                className="w-100"
+                style={{ minWidth: 180 }}
+                name="device_imei"
+                placeholder="Vehicle"
+                onChange={handleVehicleIdChange}
+              >
+                <Option value="All">All</Option>
+                <Option value="2109120102295">TN01AB1234</Option>
+                <Option value="2109120102294">TN02AB9874</Option>
+              </Select>
+            </div>
 
-        </Table>
-      </div>
-    </Card>
+            <div className="mb-3">
+              <Button
+                type="primary"
+                success
+                icon={<SearchOutlined />}
+                onClick={handleSearchClick}
+              >
+                Search
+              </Button>
+            </div>
+            <div className="mb-3">
+              <Button
+                type="primary"
+                icon={<FileExcelOutlined />}
+                onClick={handleClick}
+              >
+                Export
+              </Button>
+            </div>
+          </Flex>
+        </Flex>
+        <div className="table-responsive">
+          {isLoading ? (
+            <div>Loading...</div> // Display loading indicator
+          ) : tripList.length > 0 ? (
+            <Table bordered columns={tableColumns} dataSource={tripList} />
+          ) : (
+            <p>No Data Found</p>
+          )}
+        </div>
+      </Card>
     </>
-  )
-}
+  );
+};
 
-export default TripReport
+export default IdleReport;
