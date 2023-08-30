@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Card, Select, DatePicker } from "antd";
 import Flex from "components/shared-components/Flex";
 import { FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
@@ -13,6 +13,24 @@ export const IdleReport = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState("All");
+  const [vehicleOptions, setVehicleOptions] = useState([]);
+
+  useEffect(() => {
+    async function fetchVehicleOptions() {
+      try {
+        const response = await api.get("vehicle_list");
+        if (response.data.success) {
+          setVehicleOptions(response.data.data);
+        } else {
+          console.error("API request was not successful");
+        }
+      } catch (error) {
+        console.error("Error fetching vehicle options:", error);
+      }
+    }
+
+    fetchVehicleOptions();
+  }, []);
 
   const handleDateRangeChange = (dateRange) => {
     setSelectedDateRange(dateRange);
@@ -39,7 +57,7 @@ export const IdleReport = () => {
       end_day: selectedDateRange
         ? selectedDateRange[1].format("YYYY-MM-DD HH:mm:ss")
         : null,
-      device_imei: selectedVehicleId === "All" ? null : selectedVehicleId,
+      device_imei: selectedVehicleId === "0" ? null : selectedVehicleId,
     };
 
     setTripList([]); // Clear previous data
@@ -150,24 +168,11 @@ export const IdleReport = () => {
           mobileFlex={false}
         >
           <Flex className="mb-1" mobileFlex={false}>
-            <div className="mr-md-6 mr-3">
-              <Select
-                showSearch
-                defaultValue="Today"
-                className="w-100"
-                style={{ minWidth: 180 }}
-              >
-                <option value="1">Today</option>
-                <option value="2">Last 7 Days</option>
-                <option value="3">Last Month</option>
-                <option value="4">Custom</option>
-              </Select>
-            </div>
             <div className="mr-md-3 mr-3">
               <RangePicker
                 showTime
                 name="range_picker"
-                format={"YYYY-MM-DD"}
+                format={"YYYY-MM-DD hh:mm:ss"}
                 onChange={handleDateRangeChange}
               />
             </div>
@@ -176,16 +181,26 @@ export const IdleReport = () => {
                 defaultValue="All"
                 className="w-100"
                 style={{ minWidth: 180 }}
-                name="device_imei"
+                name="vehicle_id"
                 placeholder="Vehicle"
                 onChange={handleVehicleIdChange}
+                value={selectedVehicleId}
               >
                 <Option value="All">All</Option>
-                <Option value="2109120102295">TN01AB1234</Option>
-                <Option value="2109120102294">TN02AB9874</Option>
+                {Array.isArray(vehicleOptions) ? (
+                  vehicleOptions.map((vehicle) => (
+                    <Option
+                      key={vehicle.device_imei}
+                      value={vehicle.device_imei}
+                    >
+                      {vehicle.vehicle_name}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value="Loading">Loading...</Option>
+                )}
               </Select>
             </div>
-
             <div className="mb-3">
               <Button
                 type="primary"

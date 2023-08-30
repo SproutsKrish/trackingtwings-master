@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Card, Select, DatePicker } from "antd";
 import Flex from "components/shared-components/Flex";
 import { FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
@@ -8,11 +8,29 @@ import { Excel } from "antd-table-saveas-excel";
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-export const IdleReport = () => {
+export const DistanceReport = () => {
   const [distanceList, setDistanceList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState("All");
+  const [vehicleOptions, setVehicleOptions] = useState([]);
+
+  useEffect(() => {
+    async function fetchVehicleOptions() {
+      try {
+        const response = await api.get("vehicle_list");
+        if (response.data.success) {
+          setVehicleOptions(response.data.data);
+        } else {
+          console.error("API request was not successful");
+        }
+      } catch (error) {
+        console.error("Error fetching vehicle options:", error);
+      }
+    }
+
+    fetchVehicleOptions();
+  }, []);
 
   const handleDateRangeChange = (dateRange) => {
     setSelectedDateRange(dateRange);
@@ -39,7 +57,7 @@ export const IdleReport = () => {
       end_day: selectedDateRange
         ? selectedDateRange[1].format("YYYY-MM-DD HH:mm:ss")
         : null,
-      device_imei: selectedVehicleId === "All" ? null : selectedVehicleId,
+      device_imei: selectedVehicleId === "0" ? null : selectedVehicleId,
     };
 
     setDistanceList([]); // Clear previous data
@@ -52,12 +70,13 @@ export const IdleReport = () => {
       if (trip_data.data && Array.isArray(trip_data.data.data)) {
         const processedData = trip_data.data.data.map((item) => ({
           s_no: item.id,
+          vehicle_name: item.vehicle_name,
           date: item.date,
-          start_time: item.start_date,
           start_location: item.start_latitude + ":" + item.start_longitude,
+          start_time: item.start_time,
           start_odometer: item.start_odometer,
-          end_time: item.end_date,
           end_location: item.end_latitude + ":" + item.end_longitude,
+          end_time: item.end_time,
           end_odometer: item.end_odometer,
           odometer_difference: item.odometer_difference,
         }));
@@ -87,33 +106,33 @@ export const IdleReport = () => {
       title: "S.No",
       dataIndex: "s_no",
     },
-    // {
-    //   title: "Vehicle Name",
-    //   dataIndex: "vehicle_name",
-    // },
+    {
+      title: "Vehicle Name",
+      dataIndex: "vehicle_name",
+    },
     {
       title: "Date",
       dataIndex: "date",
-    },
-    {
-      title: "Start Time",
-      dataIndex: "start_time",
     },
     {
       title: "Start Location",
       dataIndex: "start_location",
     },
     {
+      title: "Start Time",
+      dataIndex: "start_time",
+    },
+    {
       title: "Start Odometer",
       dataIndex: "start_odometer",
     },
     {
-      title: "End Time",
-      dataIndex: "end_time",
+      title: "End Location",
+      dataIndex: "end_location",
     },
     {
       title: "End Time",
-      dataIndex: "end_location",
+      dataIndex: "end_time",
     },
     {
       title: "End Odometer",
@@ -149,24 +168,11 @@ export const IdleReport = () => {
           mobileFlex={false}
         >
           <Flex className="mb-1" mobileFlex={false}>
-            <div className="mr-md-6 mr-3">
-              <Select
-                showSearch
-                defaultValue="Today"
-                className="w-100"
-                style={{ minWidth: 180 }}
-              >
-                <option value="1">Today</option>
-                <option value="2">Last 7 Days</option>
-                <option value="3">Last Month</option>
-                <option value="4">Custom</option>
-              </Select>
-            </div>
             <div className="mr-md-3 mr-3">
               <RangePicker
                 showTime
                 name="range_picker"
-                format={"YYYY-MM-DD"}
+                format={"YYYY-MM-DD hh:mm:ss"}
                 onChange={handleDateRangeChange}
               />
             </div>
@@ -175,16 +181,26 @@ export const IdleReport = () => {
                 defaultValue="All"
                 className="w-100"
                 style={{ minWidth: 180 }}
-                name="device_imei"
+                name="vehicle_id"
                 placeholder="Vehicle"
                 onChange={handleVehicleIdChange}
+                value={selectedVehicleId}
               >
                 <Option value="All">All</Option>
-                <Option value="2109120102295">TN01AB1234</Option>
-                <Option value="2109120102294">TN02AB9874</Option>
+                {Array.isArray(vehicleOptions) ? (
+                  vehicleOptions.map((vehicle) => (
+                    <Option
+                      key={vehicle.device_imei}
+                      value={vehicle.device_imei}
+                    >
+                      {vehicle.vehicle_name}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value="Loading">Loading...</Option>
+                )}
               </Select>
             </div>
-
             <div className="mb-3">
               <Button
                 type="primary"
@@ -220,4 +236,4 @@ export const IdleReport = () => {
   );
 };
 
-export default IdleReport;
+export default DistanceReport;

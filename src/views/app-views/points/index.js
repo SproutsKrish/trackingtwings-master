@@ -1,92 +1,355 @@
-import React,{useState} from 'react'
-import {Table,Row,Col,Button,Card,Drawer,Select, Input,Form,DatePicker} from 'antd'
-import Flex from 'components/shared-components/Flex'
-const { Option } = Select
-const { RangePicker } = DatePicker;
-const tableColumns = [
-    {
-        title: 'S.No',
-        dataIndex:'id'
-    },
-    {
-        title: 'Point Type',
-        dataIndex: 'point_type',
-    },
-    {
-        title: 'Points',
-        dataIndex: 'points',
-    },
-    {
-        title: 'Plan',
-        dataIndex: 'plan',
-    },
-    {
-        title: 'Role',
-        dataIndex: 'role',
-    },
-    {
-        title: 'User Name',
-        dataIndex: 'user_name',
-    },
-    {
-        title: 'Transaction Date',
-        dataIndex: 'created_at',
-    },
-]
-const data_source = [
-    {
-        id:"1",
-        point_type:"NEW",
-        points:"500",
-        plan:"BASIC+FUEL - 1 YEAR",
-        role:"Admin",
-        user_name:"Acute",
-        created_at:"2023-08-01 01:00:00"
-    },
-    {
-        id:"2",
-        point_type:"RECHARGE",
-        points:"100",
-        plan:"FUEL - 3 MONTHS",
-        role:"Distributor",
-        user_name:"PSK Enginering",
-        created_at:"2023-08-01 03:00:00"
-    },
-    {
-        id:"3",
-        point_type:"RECHARGE",
-        points:"500",
-        plan:"TEMPERATURE - 6 MONTHS",
-        role:"Dealer",
-        user_name:"ABC Dealer",
-        created_at:"2023-08-02 05:00:00"
-    },
-    {
-        id:"4",
-        point_type:"NEW",
-        points:"500",
-        points:"100",
-        plan:"BASIC+FUEL+TEMPERATURE - 6 MONTHS",
-        role:"Distributor",
-        user_name:"PSK Enginering",
-        created_at:"2023-08-01 03:00:00"
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  Button,
+  Card,
+  Drawer,
+  Select,
+  Input,
+  Alert,
+  Form,
+  Span,
+} from "antd";
+import Flex from "components/shared-components/Flex";
+import api from "configs/apiConfig";
+import { message } from "antd";
+import { EditOutlined } from "@ant-design/icons";
+
+import {
+  PlusOutlined,
+  FileExcelOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import utils from "utils";
+import OrderListData from "assets/data/order-list.data.json";
+import userData from "assets/data/user-list.data.json";
+import { Global } from "@emotion/react";
+const { Option } = Select;
+export const User = () => {
+  const [form] = Form.useForm();
+  const [list, setList] = useState(userData);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [open, setOpen] = useState(false);
+
+  const [userList, setUserList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [selectedPlanId, setselectedPlanId] = useState();
+  const [PlanOptions, setPlanOptions] = useState([]);
+
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const [editedName, setEditedName] = useState("");
+
+  const showDrawer = () => {
+    setOpen(true);
+  };
+  const onClose = () => {
+    setOpen(false);
+  };
+
+  const user = () => {
+    return localStorage.getItem("id");
+  };
+  const role = () => {
+    return localStorage.getItem("role");
+  };
+  const admin = () => {
+    return localStorage.getItem("admin_id");
+  };
+  const distributor = () => {
+    return localStorage.getItem("distributor_id");
+  };
+  const dealer = () => {
+    return localStorage.getItem("dealer_id");
+  };
+  const subdealer = () => {
+    return localStorage.getItem("subdealer_id");
+  };
+
+  const admin_id = admin();
+  const distributor_id = distributor();
+  const dealer_id = dealer();
+  const subdealer_id = subdealer();
+  const created_by = user();
+  const role_id = role();
+
+  const onFinish = async (values) => {
+    const updatedValues = {
+      ...values,
+      admin_id,
+      distributor_id,
+      dealer_id,
+      subdealer_id,
+      created_by,
+      role_id,
+    };
+
+    console.log("Form values:", updatedValues);
+
+    try {
+      const response = await api.post("point", updatedValues);
+      setIsSubmitted(true);
+      // Handle successful response here if needed
+    } catch (error) {
+      if (error.response && error.response.status === 403) {
+        const errorData = error.response.data;
+
+        if (errorData.message && typeof errorData.message === "object") {
+          const validationErrors = errorData.message;
+        }
+      }
     }
-]
-const Point = () => {
+  };
+
+  async function fetchPlanOptions(setPlanOptions) {
+    try {
+      const response = await api.get("plan");
+      if (response.data.success) {
+        setPlanOptions(response.data.data);
+      } else {
+        console.error("API request was not successful");
+      }
+    } catch (error) {
+      console.error("Error fetching countries:", error);
+    }
+  }
+
+  async function loadUsers(setUserList) {
+    try {
+      const response = await api.post("user_point_list", [created_by, role_id]);
+      console.log(response);
+      if (response.data.success) {
+        setUserList(response.data.data);
+      } else {
+        console.error("API request was not successful");
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }
+
+  function handleEditClick(record) {
+    // Display an alert with the record information
+    const id = record.id;
+    setEditedName(record.name);
+    const email = record.email;
+    const role = record.role;
+    const role_id = record.role_id;
+    const country = record.country;
+    const country_id = record.country_id;
+
+    console.log(editedName);
+    setOpen(true);
+    // You can replace the alert with your actual edit logic
+  }
+
+  // Inside your component
+  useEffect(() => {
+    fetchPlanOptions(setPlanOptions);
+    loadUsers(setUserList);
+  }, []);
+
+  const handlePlanIdChange = (countryId) => {
+    setselectedPlanId(countryId);
+  };
+
+  const tableColumns = [
+    {
+      title: "Name",
+      dataIndex: "name",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+    },
+    {
+      title: "Role",
+      dataIndex: "role",
+    },
+    {
+      title: "Country",
+      dataIndex: "country",
+    },
+    {
+      title: "Edit",
+      dataIndex: "edit",
+      render: (_, record) => (
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={() => handleEditClick(record)}
+        >
+          <EditOutlined />
+        </span>
+      ),
+    },
+  ];
+
+  const handleShowStatus = (value) => {
+    if (value !== "All") {
+      const key = "paymentStatus";
+      const data = utils.filterArray(OrderListData, key, value);
+      setList(data);
+    } else {
+      setList(OrderListData);
+    }
+  };
+
+  const onSearch = (e) => {
+    const value = e.currentTarget.value;
+    const searchArray = e.currentTarget.value ? list : OrderListData;
+    const data = utils.wildCardSearch(searchArray, value);
+    setList(data);
+    setSelectedRowKeys([]);
+  };
+
+  const rowSelection = {
+    onChange: (key, rows) => {
+      setSelectedRows(rows);
+      setSelectedRowKeys(key);
+    },
+  };
+
   return (
     <>
-    <Row>
-        <Col xs={24} sm={24} md={24} lg={24}>
-            <Card title="Point System">
-                <Flex alignItems="center" justifyContent="space-between" mobileFlex={false}>
-                    
-                </Flex>
-                <Table bordered columns={tableColumns} dataSource={data_source}></Table>
-            </Card>
-        </Col>
-    </Row>
-    </>
-  )
-}
+      <Card title="Points">
+        <Flex
+          alignItems="center"
+          justifyContent="space-between"
+          mobileFlex={false}
+        >
+          <Flex className="mb-1" mobileFlex={false}>
+            <div className="mr-md-3 mb-3">
+              <Input
+                placeholder="Search"
+                prefix={<SearchOutlined />}
+                onChange={(e) => onSearch(e)}
+              />
+            </div>
 
-export default Point
+            <div className="mb-3"></div>
+          </Flex>
+          <div className="mb-3">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={showDrawer}
+              ghost
+            >
+              Add Points
+            </Button>
+          </div>
+        </Flex>
+        <div className="table-responsive">
+          <Table
+            bordered
+            columns={tableColumns}
+            dataSource={userList}
+            rowKey="id"
+            rowSelection={{
+              selectedRowKeys: selectedRowKeys,
+              type: "checkbox",
+              preserveSelectedRowKeys: false,
+              ...rowSelection,
+            }}
+          />
+        </div>
+      </Card>
+
+      <Drawer placement="right" closable={false} onClose={onClose} open={open}>
+        <div className="container">
+          <h2>Point Info</h2>
+          <Form name="registrationForm" onFinish={onFinish} layout="vertical">
+            <Form.Item
+              label="User"
+              name="user_id"
+              rules={[{ required: true, message: "Please Select Plan" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Select User"
+                optionFilterProp="children"
+                onChange={loadUsers}
+                value={setUserList}
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
+                }
+              >
+                {Array.isArray(userList) ? (
+                  userList.map((user) => (
+                    <Option key={user.id} value={user.id}>
+                      {user.name}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value="Loading">Loading...</Option>
+                )}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Point Type"
+              name="point_type_id"
+              rules={[{ required: true, message: "Please Select Point Type" }]}
+            >
+              <Select placeholder="Select Point Type">
+                <Option value="1">New Point</Option>
+                <Option value="2">Recharge Point</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Plan"
+              name="plan_id"
+              rules={[{ required: true, message: "Please Select Plan" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Select Plan"
+                optionFilterProp="children"
+                onChange={handlePlanIdChange}
+                value={selectedPlanId}
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
+                }
+              >
+                {Array.isArray(PlanOptions) ? (
+                  PlanOptions.map((plan) => (
+                    <Option key={plan.id} value={plan.id}>
+                      {plan.package_name + "  -  " + plan.period_name}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value="Loading">Loading...</Option>
+                )}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Points"
+              name="total_point"
+              rules={[{ required: true, message: "Please Enter Points" }]}
+            >
+              <Input type="number" max={100} />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit">
+                Register
+              </Button>
+            </Form.Item>
+          </Form>
+          {isSubmitted && (
+            <div style={{ marginTop: "16px" }}>
+              <Alert message="Form submitted successfully!" type="success" />
+            </div>
+          )}
+        </div>
+      </Drawer>
+    </>
+  );
+};
+export default User;

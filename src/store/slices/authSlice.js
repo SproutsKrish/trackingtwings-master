@@ -27,12 +27,21 @@ export const signIn = createAsyncThunk(
         const user_name = response.data.data.user.name;
         const user_email = response.data.data.user.email;
         const token = response.data.data.user;
+        const admin_id = response.data.data.user.admin_id;
+        const distributor_id = response.data.data.user.distributor_id;
+        const dealer_id = response.data.data.user.dealer_id;
+        const subdealer_id = response.data.data.user.subdealer_id;
+
         console.log(token);
         localStorage.setItem("token", refresh_token);
         localStorage.setItem("role", role_id);
         localStorage.setItem("user_name", user_name);
         localStorage.setItem("id", id);
         localStorage.setItem("email", user_email);
+        localStorage.setItem("admin_id", admin_id);
+        localStorage.setItem("distributor_id", distributor_id);
+        localStorage.setItem("dealer_id", dealer_id);
+        localStorage.setItem("subdealer_id", subdealer_id);
         setTokenInHeaders();
 
         return { token, refresh_token };
